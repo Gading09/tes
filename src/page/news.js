@@ -1,34 +1,39 @@
 import React, {Component} from "react";
 import Header from "../component/header";
-import axios from "axios";
 import BeritaTerkini from "../component/berita_terkini";
 import Berita from "../component/berita"
 import "../style/css-final.css";
 import "../style/bootstrap.min.css";
-
-const apiKey = "02d1c2c457c14f739ed709c4bca05f3c"
-const baseUrl = "https://newsapi.org/v2/"
-const urlHeadline = baseUrl+"top-headlines?country=id&apikey="+apiKey;
+import { withRouter } from "react-router-dom";
+import { connect } from "unistore/react";
+import { actions } from "../store";
+import { Redirect } from "react-router-dom"
 
 class News extends Component{
+    RequestNewCategory = async () => {
+        const paramCategory = await this.props.match.params.category;
+        await this.props.requestNews(paramCategory)
+    }
+    handleRouterCategory = async categoryName => {
+        const category = categoryName;
+        await this.props.history.repleace("/news-category/"+category);
+        await this.RequestNewCategory();
+    }
+    componentDidMount = async() => {
+        // console.warn("cek props component did mount", this.props);
+        
+        await this.props.RequestDataNews()
+    }
+    handleInputChange = async event => {
+        await this.props.handleInputChangeSearch(event)
+        const value = this.props.search
+        this.props.searchNews(value);
+    }
 
-    state = {
-        listNews : [],
-        isloading : true
-    }
-    componentDidMount = () => {
-        const self = this;
-        axios
-            .get(urlHeadline)
-            .then(function(response){
-                self.setState({ listNews: response.data.articles, isloading: false});
-            })
-            .catch(function(error){
-                self.setState({ isloading:false})
-            })
-    }
     render(){
-        const { listNews, isloading} = this.state;
+        // console.warn("cek props", this.props);
+        
+        const { listNews, isloading} = this.props;
         const topHeadlines = listNews.filter(item => {
             if (item.content !== null && item.image !== null){
                 return item;
@@ -48,15 +53,25 @@ class News extends Component{
                 />
             );
         });
-        
+        if(this.props.is_login===false){
+            return <Redirect to ={{ pathname: '/signin' }}/>
+        }
         return (
             <div>
-                <Header/>
-                <div class="container">
+                <div>{this.props.test}</div>
+                <Header
+                doSearch={event => this.handleInputChange(event)}
+                everything = {event => this.handleRouterCategory(event)}
+                placeholder="ketik sesuatu"
+                {...this.props}
+                />
+                <div class="container-fluid">
                     <div class="row berita">
                         <div class="col-md-1"></div>
-                            <BeritaTerkini/>
-                            {isloading ? <div style={{ textAlign:"center"}}>looding...</div> : headlineNews}
+                        <BeritaTerkini/>
+                        <div className="col-md-7 habis">
+                        {isloading ? <div style={{ textAlign:"center"}}>looding...</div> : headlineNews}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -64,4 +79,7 @@ class News extends Component{
     }
 }
 
-export default News;
+export default connect(
+    "test, listNews, isloading, search",
+    actions
+  )(withRouter(News));
